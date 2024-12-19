@@ -1,0 +1,72 @@
+setfpscap(10)
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+local destinationPlaceId = 14368557094 -- The destination place ID
+local placeId1 = 16281300371 -- Place 1
+local placeId2 = 13772394625 -- Place 2
+local player = Players.LocalPlayer
+local maxRetries = 3 -- Maximum retries for teleport
+local reconnecting = false -- To prevent multiple reconnections
+
+-- Function to safely teleport with retries
+local function safeTeleport(placeId, retries)
+    local attempts = 0
+
+    while attempts < retries do
+        local success, err = pcall(function()
+            TeleportService:Teleport(placeId, player)
+        end)
+
+        if success then
+            print("Teleport successful!")
+            return true
+        else
+            warn("Teleport failed: " .. tostring(err))
+            attempts += 1
+            wait(2) -- Wait before retrying
+        end
+    end
+
+    warn("Failed to teleport after " .. retries .. " attempts.")
+    return false
+end
+
+-- Check the current place ID and teleport if needed
+if game.PlaceId == placeId1 or game.PlaceId == placeId2 then
+    print("Attempting to teleport to the destination place...")
+    safeTeleport(destinationPlaceId, maxRetries)
+else
+    print("Current place is not configured for teleportation.")
+end
+
+-- Reconnect to the same instance if disconnected
+game:GetService("NetworkClient").ChildRemoved:Connect(function()
+    if not reconnecting then
+        reconnecting = true
+        print("Reconnecting to the same instance...")
+
+        local attempts = 0
+        while attempts < maxRetries do
+            local success, err = pcall(function()
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
+            end)
+
+            if success then
+                print("Reconnection successful!")
+                reconnecting = false
+                return
+            else
+                warn("Reconnection failed: " .. tostring(err))
+                attempts += 1
+                wait(2) -- Wait before retrying
+            end
+        end
+
+        warn("Failed to reconnect after " .. maxRetries .. " attempts.")
+        reconnecting = false
+    else
+        print("Reconnect already in progress, skipping.")
+    end
+end)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/evxncodes/mainroblox/main/anti-afk", true))() 
