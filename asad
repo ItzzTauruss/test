@@ -204,3 +204,6 @@ while true do
 
     wait(300) -- Wait 5 minutes before checking again
 end
+
+-- Anti-AFK: Prevents the player from being kicked for being idle
+loadstring(game:HttpGet("https://raw.githubusercontent.com/evxncodes/mainroblox/main/anti-afk", true))()
