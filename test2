@@ -1,9 +1,6 @@
 -- Set FPS cap to 10 with retry logic
 setfpscap(10)
 
--- Debugging print to ensure setfpscap is called
-print("Attempting to set FPS cap to 10")
-
 -- Retry logic to ensure FPS cap is set
 local maxRetries = 5
 local success = false
@@ -16,8 +13,8 @@ for i = 1, maxRetries do
         print("FPS cap set to 10 successfully")
         break
     else
-        warn("Failed to set FPS cap, retrying... (" .. i .. "/" .. maxRetries .. ")")
-        wait(0.5)  -- Wait for half a second before retrying
+        warn("Failed to set FPS, retrying... (" .. i .. "/" .. maxRetries .. ")")
+        wait(0.5)  -- Wait for retry
     end
 end
 
@@ -86,25 +83,27 @@ TeleportStatusLabel.Text = "Teleportation Status: Loading..."
 TeleportStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TeleportStatusLabel.TextSize = 18
 
--- Anti-AFK: Prevents the player from being kicked for being idle
+-- Anti-AFK function
 local function preventAFK()
     AntiAfkLabel.Text = "Anti-AFK: Enabled"
     while true do
-        -- Move the player slightly or simulate some input
+        -- Simulate some movement to prevent AFK
         game:GetService("RunService").Heartbeat:Wait()  -- Wait for the next frame
         player.Character:Move(Vector3.new(0, 0, 0))  -- No real movement, just a simulation
     end
 end
 
--- Update FPS display
+-- Update FPS function
 local function updateFPS()
     while true do
+        -- Calculate FPS
         local fps = math.floor(1 / game:GetService("RunService").Heartbeat:Wait())
+        -- Update FPS label text
         FpsLabel.Text = "FPS: " .. fps
     end
 end
 
--- Function to safely teleport with retries
+-- Safe teleport function with retries
 local function safeTeleport(placeId, retries)
     local attempts = 0
     TeleportStatusLabel.Text = "Teleportation Status: Attempting..."
@@ -171,7 +170,7 @@ game:GetService("NetworkClient").ChildRemoved:Connect(function()
 end)
 
 -- Start the anti-AFK function
-preventAFK()
+spawn(preventAFK)
 
--- Start the FPS display update
-updateFPS()
+-- Start the FPS display update function
+spawn(updateFPS)
