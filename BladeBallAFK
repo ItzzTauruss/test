@@ -113,19 +113,18 @@ local emoteNames = {
     Emote280 = "Ocean Embrace",
     Emote216 = "Mythical Enchanter",
     Emote356 = "Enchanted Blossom",
-    Emote187 = "your mom"
 }
 
 -- Rare Emotes to detect (based on IDs)
 local rareEmotes = {
     "Emote199", "Emote200", "Emote207", "Emote209", "Emote210", 
-    "Emote492", "Emote493", "Emote280", "Emote216", "Emote356", "Emote187"
+    "Emote492", "Emote493", "Emote280", "Emote216", "Emote356",
 }
 
 local OSTime = os.time()
 local Time = os.date('!*t', OSTime)
 local Avatar = 'https://cdn.discordapp.com/embed/avatars/4.png'
-local Content = '@everyone'
+local Content = 'test'
 
 local Embed = {
     title = 'Blade Ball AFK World - Rare Emotes Detected',
