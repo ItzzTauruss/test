@@ -184,7 +184,7 @@ local function sendWebhookMessage(emotes)
 
     -- Send the request using synapse's HTTP request functions
     (syn and syn.request or http_request) {
-        Url = 'https://discord.com/api/webhooks/1214291887180095508/VZrmpoVGh2yBpq1Z9sI3GgW16peDwdDUlHq4XWE1i_g5LsG0zkeZBQoM_ttFgFGWDC_h', -- Your webhook URL
+        Url = 'https://discord.com/api/webhooks/1319271027854802985/DyjBg0_w1D-c1CmQPpsK6f5dOEV8lHerWfnQWxGzItiKtMWfCDui8zwofu7L8nQrU1d0', -- Your webhook URL
         Method = 'POST',
         Headers = {
             ['Content-Type'] = 'application/json',
