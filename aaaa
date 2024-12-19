@@ -1,0 +1,98 @@
+--[[ 
+    WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+local OSTime = os.time();
+local Time = os.date('!*t', OSTime);
+local Avatar = 'https://cdn.discordapp.com/embed/avatars/4.png';
+local Content = '@everyone';
+
+-- Emote Name Mapping
+local emoteNames = {
+    Emote199 = "Phoenix Rebirth",
+    Emote200 = "Aurora Spirit",
+    Emote207 = "Celestial Levitation",
+    Emote209 = "Sinister Awakening",
+    Emote210 = "Celestial Awakening",
+    Emote492 = "Chroma DJ",
+    Emote493 = "Zeus Revenge",
+    Emote280 = "Ocean Embrace",
+    Emote216 = "Mythical Enchanter",
+    Emote356 = "Enchanted Blossom",
+    Emote187 = "your mom"
+}
+
+-- Rare Emotes to detect (based on IDs)
+local rareEmotes = {
+    "Emote199", "Emote200", "Emote207", "Emote209", "Emote210", 
+    "Emote492", "Emote493", "Emote280", "Emote216", "Emote356", "Emote187"
+}
+
+local Embed = {
+    title = 'Blade Ball AFK World - Rare Emotes Detected';
+    color = 16711680; -- Red color in hex
+    footer = { text = game.JobId };
+    author = {
+        name = 'Tauruses';
+        url = 'https://www.roblox.com/';
+    };
+    fields = {
+        {
+            name = 'Detected Rare Emotes';
+            value = 'None'; -- Placeholder text, will be updated with detected emotes
+        }
+    };
+    timestamp = string.format('%d-%d-%dT%02d:%02d:%02dZ', Time.year, Time.month, Time.day, Time.hour, Time.min, Time.sec);
+};
+
+-- Function to check for rare emotes in the player's inventory
+local function checkForRareEmotes()
+    local player = game.Players.LocalPlayer
+    local emoteList = player.PlayerGui:WaitForChild("EmoteWheel"):WaitForChild("List"):WaitForChild("Content"):GetChildren()
+    local rareFound = {}
+
+    for _, emote in ipairs(emoteList) do
+        if table.find(rareEmotes, emote.Name) then
+            -- Map emote name to the custom name
+            local emoteCustomName = emoteNames[emote.Name] or emote.Name
+            table.insert(rareFound, emoteCustomName)
+        end
+    end
+
+    return rareFound
+end
+
+-- Function to send a webhook message with the detected rare emotes
+local function sendWebhookMessage(emotes)
+    local HttpService = game:GetService('HttpService')
+
+    -- Prepare the embed field to show detected emotes
+    Embed.fields[1].value = #emotes > 0 and table.concat(emotes, ", ") or "No rare emotes detected"
+
+    -- Prepare the webhook message body
+    local data = {
+        content = Content;
+        embeds = { Embed }
+    }
+
+    -- Send the request using synapse's HTTP request functions
+    (syn and syn.request or http_request) {
+        Url = 'https://discord.com/api/webhooks/1214291887180095508/VZrmpoVGh2yBpq1Z9sI3GgW16peDwdDUlHq4XWE1i_g5LsG0zkeZBQoM_ttFgFGWDC_h'; -- Your webhook URL
+        Method = 'POST';
+        Headers = {
+            ['Content-Type'] = 'application/json';
+        };
+        Body = HttpService:JSONEncode(data);
+    }
+end
+
+-- Periodically check for rare emotes every 5 minutes (300 seconds)
+while true do
+    local rareEmotesDetected = checkForRareEmotes()
+
+    if #rareEmotesDetected > 0 then
+        -- Send detected rare emotes to the webhook
+        sendWebhookMessage(rareEmotesDetected)
+    end
+
+    wait(300) -- Wait 5 minutes before checking again
+end
