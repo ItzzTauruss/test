@@ -1,217 +1,199 @@
---[[ 
-    WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
-]]
-
--- Set FPS cap to 10 with retry logic
 setfpscap(10)
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local UserInputService = game:GetService("UserInputService")
+local NetworkClient = game:GetService("NetworkClient")
 
--- Debugging print to ensure setfpscap is called
-print("Attempting to set FPS cap to 10")
+-- Discord webhook URL
+local webhookUrl = "https://discord.com/api/webhooks/1319271027854802985/DyjBg0_w1D-c1CmQPpsK6f5dOEV8lHerWfnQWxGzItiKtMWfCDui8zwofu7L8nQrU1d0"
 
--- Retry logic to ensure FPS cap is set
-local maxRetries = 5
-local success = false
+-- Emote to Name mapping
+local emoteNames = {
+    Emote199 = "Phoenix Rebirth (1/10M)",
+    Emote200 = "Aurora Spirit (1/5M)",
+    Emote207 = "Celestial Levitation (1/250K)",
+    Emote209 = "Sinister Awakening (1/1M)",
+    Emote210 = "Celestial Awakening (1/2.5M)",
+    Emote492 = "Chroma DJ (1/10M)",
+    Emote493 = "Zeus Revenge (1/7.5M)",
+    Emote280 = "Ocean Embrace (1/500K)",
+    Emote216 = "Mythical Enchanter (1/7.5M)",
+    Emote356 = "Enchanted Blossom (1/750K)",
+    Emote208 = "Matrix Infusion (1/100K)",
+    Emote211 = "Void Shield (1/200K)",
+    Emote217 = "Elemental Mark (1/150K)",
+    Emote218 = "Dimensional Pit (1/75K)",
+    Emote282 = "Evil Summon (1/66K)",
+    Emote354 = "Phantom Cloak (1/350K)",
+    Emote501 = "Rose Quartz (1/33K)",
+    Emote500 = "Glitched (1/20K)",
+    Emote502 = "Tropical Storm (1/250K)",
+}
 
-for i = 1, maxRetries do
-    success = pcall(function()
-        setfpscap(10)
+-- Teleportation Settings
+local destinationPlaceId = 14368557094 -- The destination place ID
+local placeId1 = 16281300371 -- The ID for Place 1
+local placeId2 = 13772394625 -- The ID for Place 2
+local maxRetries = 5 -- Maximum number of retry attempts
+local retryDelay = 3 -- Time (in seconds) between retries
+
+local player = Players.LocalPlayer
+
+-- Function to send webhook notification
+local function sendWebhookNotification(emoteName, username)
+    local content = "@everyone"
+    local embed = {
+        title = "Blade Ball AFK World",
+        color = 16711680,  -- Red color for the embed
+        description = username .. " rolled **" .. emoteName .. "**!",
+        footer = { text = "Game Job ID: " .. game.JobId },
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ", os.time())  -- ISO 8601 timestamp
+    }
+
+    local body = HttpService:JSONEncode({
+        content = content,
+        embeds = { embed }
+    })
+
+    print("Sending webhook for:", emoteName)
+    local success, response = pcall(function()
+        local request = syn and syn.request or http_request
+        return request({
+            Url = webhookUrl,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = body
+        })
     end)
+
     if success then
-        print("FPS cap set to 10 successfully")
-        break
+        print("Webhook sent successfully!")
     else
-        warn("Failed to set FPS cap, retrying... (" .. i .. "/" .. maxRetries .. ")")
-        wait(0.5)  -- Wait for half a second before retrying
+        warn("Error sending webhook:", response)
     end
 end
 
-if not success then
-    warn("Failed to set FPS cap after " .. maxRetries .. " attempts")
+-- Function to monitor the ScrollingFrame for new emotes
+local function monitorEmote()
+    local username = player.Name
+    print("Script executed for player: " .. username)
+
+    local playerGui = player:FindFirstChild("PlayerGui")
+    if playerGui then
+        local afkWorld = playerGui:FindFirstChild("AFKWorld")
+        if afkWorld then
+            local right = afkWorld:FindFirstChild("Right")
+            if right then
+                local main = right:FindFirstChild("Main")
+                if main then
+                    local scrollList = main:FindFirstChild("ScrollList")
+                    if scrollList then
+                        local scrollingFrame = scrollList:FindFirstChild("ScrollingFrame")
+                        if scrollingFrame then
+                            print("Monitoring ScrollingFrame for new emotes...")
+
+                            -- Listen for new emotes being added to the ScrollingFrame
+                            scrollingFrame.ChildAdded:Connect(function(child)
+                                print("New child detected:", child.Name, "Class:", child.ClassName)
+
+                                -- Check if it's a valid emote
+                                local emoteName = emoteNames[child.Name]
+                                if emoteName then
+                                    print(username .. " rolled " .. emoteName .. "!")
+                                    sendWebhookNotification(emoteName, username)
+                                else
+                                    print("Unrecognized or ignored child detected:", child.Name)
+                                end
+                            end)
+
+                            -- Keep the script running indefinitely to continue monitoring
+                            while true do
+                                task.wait(1)  -- Add a small wait to avoid excessive processing
+                            end
+                        else
+                            print("ScrollingFrame not found.")
+                        end
+                    else
+                        print("ScrollList not found.")
+                    end
+                else
+                    print("Main not found.")
+                end
+            else
+                print("Right not found.")
+            end
+        else
+            print("AFKWorld not found.")
+        end
+    else
+        print("PlayerGui not found for player: " .. username)
+    end
 end
 
--- Services and variables initialization
-local TeleportService = game:GetService("TeleportService")
-local Players = game:GetService("Players")
-
-local destinationPlaceId = 14368557094 -- The destination place ID
-local placeId1 = 16281300371 -- Place 1
-local placeId2 = 13772394625 -- Place 2
-local player = Players.LocalPlayer
-local maxRetries = 3 -- Maximum retries for teleport
-local reconnecting = false -- To prevent multiple reconnections
-
--- Function to safely teleport with retries
-local function safeTeleport(placeId, retries)
-    local attempts = 0
-
-    while attempts < retries do
-        local success, err = pcall(function()
+-- Function to handle safe teleportation with retries
+local function safeTeleport(placeId)
+    for attempt = 1, maxRetries do
+        print(string.format("Teleport attempt %d/%d...", attempt, maxRetries))
+        local success, errorMsg = pcall(function()
             TeleportService:Teleport(placeId, player)
         end)
-
         if success then
             print("Teleport successful!")
             return true
         else
-            warn("Teleport failed: " .. tostring(err))
-            attempts += 1
-            wait(2) -- Wait before retrying
+            warn(string.format("Teleport attempt %d failed: %s", attempt, tostring(errorMsg)))
+            wait(retryDelay)
         end
     end
-
-    warn("Failed to teleport after " .. retries .. " attempts.")
+    warn("All teleport attempts failed.")
     return false
 end
 
--- Check the current place ID and teleport if needed
+-- Check the current place ID and teleport if it matches placeId1 or placeId2
 if game.PlaceId == placeId1 or game.PlaceId == placeId2 then
-    print("Attempting to teleport to the destination place...")
-    safeTeleport(destinationPlaceId, maxRetries)
+    print("Current place matches. Attempting teleport...")
+    local success = safeTeleport(destinationPlaceId)
+    if not success then
+        warn("Failed to teleport to the destination after all retries.")
+    end
 else
     print("Current place is not configured for teleportation.")
 end
 
--- Reconnect to the same instance if disconnected
-game:GetService("NetworkClient").ChildRemoved:Connect(function()
-    if not reconnecting then
-        reconnecting = true
-        print("Reconnecting to the same instance...")
-
-        local attempts = 0
-        while attempts < maxRetries do
-            local success, err = pcall(function()
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
-            end)
-
-            if success then
-                print("Reconnection successful!")
-                reconnecting = false
-                return
-            else
-                warn("Reconnection failed: " .. tostring(err))
-                attempts += 1
-                wait(2) -- Wait before retrying
-            end
+-- Emergency reconnection to the same instance if disconnected
+NetworkClient.ChildRemoved:Connect(function()
+    print("NetworkClient disconnected. Attempting reconnection...")
+    for attempt = 1, maxRetries do
+        local success, errorMsg = pcall(function()
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
+        end)
+        if success then
+            print("Reconnection successful!")
+            return
+        else
+            warn(string.format("Reconnection attempt %d failed: %s", attempt, tostring(errorMsg)))
+            wait(retryDelay)
         end
-
-        warn("Failed to reconnect after " .. maxRetries .. " attempts.")
-        reconnecting = false
-    else
-        print("Reconnect already in progress, skipping.")
     end
+    warn("All reconnection attempts failed.")
 end)
 
--- Emote Name Mapping
-local emoteNames = {
-    Emote199 = "Phoenix Rebirth",
-    Emote200 = "Aurora Spirit",
-    Emote207 = "Celestial Levitation",
-    Emote209 = "Sinister Awakening",
-    Emote210 = "Celestial Awakening",
-    Emote492 = "Chroma DJ",
-    Emote493 = "Zeus Revenge",
-    Emote280 = "Ocean Embrace",
-    Emote216 = "Mythical Enchanter",
-    Emote356 = "Enchanted Blossom",
-}
-
--- Rare Emotes to detect (based on IDs)
-local rareEmotes = {
-    "Emote199", "Emote200", "Emote207", "Emote209", "Emote210", 
-    "Emote492", "Emote493", "Emote280", "Emote216", "Emote356",
-}
-
-local OSTime = os.time()
-local Time = os.date('!*t', OSTime)
-local Avatar = 'https://cdn.discordapp.com/embed/avatars/4.png'
-local Content = 'test'
-
-local Embed = {
-    title = 'Blade Ball AFK World - Rare Emotes Detected',
-    color = 16711680, -- Red color in hex
-    footer = { text = game.JobId },
-    author = {
-        name = 'Tauruses',
-        url = 'https://www.roblox.com/'
-    },
-    fields = {
-        {
-            name = 'Detected Rare Emotes',
-            value = 'None', -- Placeholder text, will be updated with detected emotes
-        },
-        {
-            name = 'Player Username',
-            value = '', -- Placeholder text for the username
-        }
-    },
-    timestamp = string.format('%d-%d-%dT%02d:%02d:%02dZ', Time.year, Time.month, Time.day, Time.hour, Time.min, Time.sec)
-}
-
--- Function to check for rare emotes in the player's inventory
-local function checkForRareEmotes()
-    local player = game.Players.LocalPlayer
-    local emoteList = player.PlayerGui:WaitForChild("EmoteWheel"):WaitForChild("List"):WaitForChild("Content"):GetChildren()
-    local rareFound = {}
-
-    for _, emote in ipairs(emoteList) do
-        if table.find(rareEmotes, emote.Name) then
-            -- Map emote name to the custom name
-            local emoteCustomName = emoteNames[emote.Name] or emote.Name
-            table.insert(rareFound, emoteCustomName)
-        end
-    end
-
-    return rareFound
-end
-
--- Function to send a webhook message with the detected rare emotes
-local function sendWebhookMessage(emotes)
-    local HttpService = game:GetService('HttpService')
-    local player = game.Players.LocalPlayer
-
-    -- Update the player username in the embed
-    Embed.fields[2].value = player.Name
-
-    -- Prepare the embed field to show detected emotes
-    Embed.fields[1].value = #emotes > 0 and table.concat(emotes, ", ") or "No rare emotes detected"
-
-    -- Prepare the webhook message body
-    local data = {
-        content = Content,
-        embeds = { Embed }
-    }
-
-    -- Send the request using synapse's HTTP request functions
-    (syn and syn.request or http_request) {
-        Url = 'https://discord.com/api/webhooks/1319271027854802985/DyjBg0_w1D-c1CmQPpsK6f5dOEV8lHerWfnQWxGzItiKtMWfCDui8zwofu7L8nQrU1d0', -- Your webhook URL
-        Method = 'POST',
-        Headers = {
-            ['Content-Type'] = 'application/json',
-        },
-        Body = HttpService:JSONEncode(data),
-    }
-end
-
--- Periodically check for rare emotes every 5 minutes (300 seconds)
-while true do
-    local rareEmotesDetected = checkForRareEmotes()
-
-    if #rareEmotesDetected > 0 then
-        -- Send detected rare emotes to the webhook
-        sendWebhookMessage(rareEmotesDetected)
-    end
-
-    wait(300) -- Wait 5 minutes before checking again
-end
-
--- Anti-AFK: Prevents the player from being kicked for being idle
-local function preventAFK()
+-- Anti-AFK functionality: Simulate actions to prevent AFK kick
+local function antiAFK()
     while true do
-        -- Move the player slightly or simulate some input
-        game:GetService("RunService").Heartbeat:Wait()  -- Wait for the next frame
-        player.Character:Move(Vector3.new(0, 0, 0))  -- No real movement, just a simulation
+        if not UserInputService:GetFocusedTextBox() then
+            -- Simulate a minor action to prevent AFK
+            game:GetService("ReplicatedStorage"):WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("SayMessageRequest"):FireServer(" ", "All")
+        end
+        wait(30)  -- Adjust time interval as needed
     end
 end
 
--- Start the anti-AFK function
-preventAFK()
+-- Start anti-AFK function
+spawn(antiAFK)
+
+-- Start monitoring emotes
+monitorEmote()
