@@ -1,106 +1,177 @@
---[[ 
-    WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
-]]
-local OSTime = os.time();
-local Time = os.date('!*t', OSTime);
-local Avatar = 'https://cdn.discordapp.com/embed/avatars/4.png';
-local Content = '@everyone';
+-- Set FPS cap to 10 with retry logic
+setfpscap(10)
 
--- Emote Name Mapping
-local emoteNames = {
-    Emote199 = "Phoenix Rebirth",
-    Emote200 = "Aurora Spirit",
-    Emote207 = "Celestial Levitation",
-    Emote209 = "Sinister Awakening",
-    Emote210 = "Celestial Awakening",
-    Emote492 = "Chroma DJ",
-    Emote493 = "Zeus Revenge",
-    Emote280 = "Ocean Embrace",
-    Emote216 = "Mythical Enchanter",
-    Emote356 = "Enchanted Blossom",
-    Emote187 = "your mom"
-}
+-- Debugging print to ensure setfpscap is called
+print("Attempting to set FPS cap to 10")
 
--- Rare Emotes to detect (based on IDs)
-local rareEmotes = {
-    "Emote199", "Emote200", "Emote207", "Emote209", "Emote210", 
-    "Emote492", "Emote493", "Emote280", "Emote216", "Emote356", "Emote187"
-}
+-- Retry logic to ensure FPS cap is set
+local maxRetries = 5
+local success = false
 
-local Embed = {
-    title = 'Blade Ball AFK World - Rare Emotes Detected';
-    color = 16711680; -- Red color in hex
-    footer = { text = game.JobId };
-    author = {
-        name = 'Tauruses';
-        url = 'https://www.roblox.com/';
-    };
-    fields = {
-        {
-            name = 'Detected Rare Emotes';
-            value = 'None'; -- Placeholder text, will be updated with detected emotes
-        },
-        {
-            name = 'Player Username';
-            value = ''; -- Placeholder text for the username
-        }
-    };
-    timestamp = string.format('%d-%d-%dT%02d:%02d:%02dZ', Time.year, Time.month, Time.day, Time.hour, Time.min, Time.sec);
-};
+for i = 1, maxRetries do
+    success = pcall(function()
+        setfpscap(10)
+    end)
+    if success then
+        print("FPS cap set to 10 successfully")
+        break
+    else
+        warn("Failed to set FPS cap, retrying... (" .. i .. "/" .. maxRetries .. ")")
+        wait(0.5)  -- Wait for half a second before retrying
+    end
+end
 
--- Function to check for rare emotes in the player's inventory
-local function checkForRareEmotes()
-    local player = game.Players.LocalPlayer
-    local emoteList = player.PlayerGui:WaitForChild("EmoteWheel"):WaitForChild("List"):WaitForChild("Content"):GetChildren()
-    local rareFound = {}
+if not success then
+    warn("Failed to set FPS cap after " .. maxRetries .. " attempts")
+end
 
-    for _, emote in ipairs(emoteList) do
-        if table.find(rareEmotes, emote.Name) then
-            -- Map emote name to the custom name
-            local emoteCustomName = emoteNames[emote.Name] or emote.Name
-            table.insert(rareFound, emoteCustomName)
+-- Services and variables initialization
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local destinationPlaceId = 14368557094 -- The destination place ID
+local placeId1 = 16281300371 -- Place 1
+local placeId2 = 13772394625 -- Place 2
+local player = Players.LocalPlayer
+local maxRetries = 3 -- Maximum retries for teleport
+local reconnecting = false -- To prevent multiple reconnections
+
+-- GUI setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = player.PlayerGui
+ScreenGui.Name = "InfoGUI"
+
+local Frame = Instance.new("Frame")
+Frame.Parent = ScreenGui
+Frame.Position = UDim2.new(0.5, -200, 0, 50)
+Frame.Size = UDim2.new(0, 400, 0, 200)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
+
+local Title = Instance.new("TextLabel")
+Title.Parent = Frame
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundTransparency = 1
+Title.Text = "Blade Ball Info"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 24
+Title.TextAlign = Enum.TextXAlignment.Center
+
+local FpsLabel = Instance.new("TextLabel")
+FpsLabel.Parent = Frame
+FpsLabel.Position = UDim2.new(0, 10, 0, 50)
+FpsLabel.Size = UDim2.new(1, -20, 0, 40)
+FpsLabel.BackgroundTransparency = 1
+FpsLabel.Text = "FPS: Loading..."
+FpsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+FpsLabel.TextSize = 18
+
+local AntiAfkLabel = Instance.new("TextLabel")
+AntiAfkLabel.Parent = Frame
+AntiAfkLabel.Position = UDim2.new(0, 10, 0, 100)
+AntiAfkLabel.Size = UDim2.new(1, -20, 0, 40)
+AntiAfkLabel.BackgroundTransparency = 1
+AntiAfkLabel.Text = "Anti-AFK: Loading..."
+AntiAfkLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+AntiAfkLabel.TextSize = 18
+
+local TeleportStatusLabel = Instance.new("TextLabel")
+TeleportStatusLabel.Parent = Frame
+TeleportStatusLabel.Position = UDim2.new(0, 10, 0, 150)
+TeleportStatusLabel.Size = UDim2.new(1, -20, 0, 40)
+TeleportStatusLabel.BackgroundTransparency = 1
+TeleportStatusLabel.Text = "Teleportation Status: Loading..."
+TeleportStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleportStatusLabel.TextSize = 18
+
+-- Anti-AFK: Prevents the player from being kicked for being idle
+local function preventAFK()
+    AntiAfkLabel.Text = "Anti-AFK: Enabled"
+    while true do
+        -- Move the player slightly or simulate some input
+        game:GetService("RunService").Heartbeat:Wait()  -- Wait for the next frame
+        player.Character:Move(Vector3.new(0, 0, 0))  -- No real movement, just a simulation
+    end
+end
+
+-- Update FPS display
+local function updateFPS()
+    while true do
+        local fps = math.floor(1 / game:GetService("RunService").Heartbeat:Wait())
+        FpsLabel.Text = "FPS: " .. fps
+    end
+end
+
+-- Function to safely teleport with retries
+local function safeTeleport(placeId, retries)
+    local attempts = 0
+    TeleportStatusLabel.Text = "Teleportation Status: Attempting..."
+
+    while attempts < retries do
+        local success, err = pcall(function()
+            TeleportService:Teleport(placeId, player)
+        end)
+
+        if success then
+            TeleportStatusLabel.Text = "Teleportation Status: Successful"
+            print("Teleport successful!")
+            return true
+        else
+            warn("Teleport failed: " .. tostring(err))
+            attempts += 1
+            TeleportStatusLabel.Text = "Teleportation Status: Failed, retrying..."
+            wait(2) -- Wait before retrying
         end
     end
 
-    return rareFound
+    TeleportStatusLabel.Text = "Teleportation Status: Failed after retries"
+    warn("Failed to teleport after " .. retries .. " attempts.")
+    return false
 end
 
--- Function to send a webhook message with the detected rare emotes
-local function sendWebhookMessage(emotes)
-    local HttpService = game:GetService('HttpService')
-    local player = game.Players.LocalPlayer
-
-    -- Update the player username in the embed
-    Embed.fields[2].value = player.Name
-
-    -- Prepare the embed field to show detected emotes
-    Embed.fields[1].value = #emotes > 0 and table.concat(emotes, ", ") or "No rare emotes detected"
-
-    -- Prepare the webhook message body
-    local data = {
-        content = Content;
-        embeds = { Embed }
-    }
-
-    -- Send the request using synapse's HTTP request functions
-    (syn and syn.request or http_request) {
-        Url = 'https://discord.com/api/webhooks/1214291887180095508/VZrmpoVGh2yBpq1Z9sI3GgW16peDwdDUlHq4XWE1i_g5LsG0zkeZBQoM_ttFgFGWDC_h'; -- Your webhook URL
-        Method = 'POST';
-        Headers = {
-            ['Content-Type'] = 'application/json';
-        };
-        Body = HttpService:JSONEncode(data);
-    }
+-- Check the current place ID and teleport if needed
+if game.PlaceId == placeId1 or game.PlaceId == placeId2 then
+    TeleportStatusLabel.Text = "Teleportation Status: Attempting..."
+    safeTeleport(destinationPlaceId, maxRetries)
+else
+    TeleportStatusLabel.Text = "Teleportation Status: Not configured for teleportation."
 end
 
--- Periodically check for rare emotes every 5 minutes (300 seconds)
-while true do
-    local rareEmotesDetected = checkForRareEmotes()
+-- Reconnect to the same instance if disconnected
+game:GetService("NetworkClient").ChildRemoved:Connect(function()
+    if not reconnecting then
+        reconnecting = true
+        TeleportStatusLabel.Text = "Teleportation Status: Reconnecting..."
 
-    if #rareEmotesDetected > 0 then
-        -- Send detected rare emotes to the webhook
-        sendWebhookMessage(rareEmotesDetected)
+        local attempts = 0
+        while attempts < maxRetries do
+            local success, err = pcall(function()
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
+            end)
+
+            if success then
+                TeleportStatusLabel.Text = "Teleportation Status: Reconnection successful"
+                reconnecting = false
+                return
+            else
+                warn("Reconnection failed: " .. tostring(err))
+                attempts += 1
+                TeleportStatusLabel.Text = "Teleportation Status: Reconnection failed, retrying..."
+                wait(2) -- Wait before retrying
+            end
+        end
+
+        TeleportStatusLabel.Text = "Teleportation Status: Failed after retries"
+        reconnecting = false
+    else
+        print("Reconnect already in progress, skipping.")
     end
+end)
 
-    wait(300) -- Wait 5 minutes before checking again
-end
+-- Start the anti-AFK function
+preventAFK()
+
+-- Start the FPS display update
+updateFPS()
