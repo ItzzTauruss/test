@@ -1,76 +1,125 @@
--- Create the main UI frame
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.Name = "ToggleableUI"
+-- Set FPS cap to 10
+setfpscap(10)
 
--- Create the UI frame that can be toggled and dragged
-local uiFrame = Instance.new("Frame")
-uiFrame.Size = UDim2.new(0, 300, 0, 150)
-uiFrame.Position = UDim2.new(0, 100, 0, 100)
-uiFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-uiFrame.Visible = false  -- Initially hidden
-uiFrame.Parent = ScreenGui
-
--- Create a title bar for dragging
-local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 30)
-titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-titleBar.Parent = uiFrame
-
--- Add text to the title bar
-local titleText = Instance.new("TextLabel")
-titleText.Size = UDim2.new(1, 0, 1, 0)
-titleText.BackgroundTransparency = 1
-titleText.Text = "Drag Me!"
-titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleText.TextSize = 18
-titleText.Parent = titleBar
-
--- Create the toggle button
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0, 100, 0, 30)
-toggleButton.Position = UDim2.new(0.5, -50, 1, 10)
-toggleButton.Text = "Toggle UI"
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-toggleButton.Parent = uiFrame
-
--- Toggle function
-toggleButton.MouseButton1Click:Connect(function()
-    uiFrame.Visible = not uiFrame.Visible
-end)
-
--- Draggable UI
-local dragging = false
-local dragInput, mousePos, framePos
-
-titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        mousePos = input.Position
-        framePos = uiFrame.Position
+-- Retry logic to ensure FPS cap is set
+local maxRetries = 5
+local success = false
+for i = 1, maxRetries do
+    success = pcall(function()
+        setfpscap(10)
+    end)
+    if success then
+        print("FPS cap set to 10 successfully")
+        break
+    else
+        warn("Failed to set FPS, retrying... (" .. i .. "/" .. maxRetries .. ")")
+        wait(0.5)  -- Wait for retry
     end
-end)
-
-titleBar.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - mousePos
-        uiFrame.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
-    end
-end)
-
-titleBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
--- Create the function to start the script
-local function createUI()
-    -- Ensure everything is initialized correctly
-    ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-    uiFrame.Parent = ScreenGui
+end
+if not success then
+    warn("Failed to set FPS cap after " .. maxRetries .. " attempts")
 end
 
--- Call the function to create the UI
-createUI()
+-- Services and variables initialization
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local destinationPlaceId = 14368557094 -- The destination place ID
+local placeId1 = 16281300371 -- Place 1
+local placeId2 = 13772394625 -- Place 2
+local player = Players.LocalPlayer
+local maxRetries = 3 -- Maximum retries for teleport
+local reconnecting = false -- To prevent multiple reconnections
+
+-- Anti-AFK function
+local function preventAFK()
+    AntiAfkLabel.Text = "Anti-AFK: Enabled"
+    while true do
+        -- Simulate some movement to prevent AFK
+        game:GetService("RunService").Heartbeat:Wait()  -- Wait for the next frame
+        player.Character:Move(Vector3.new(0, 0, 0))  -- No real movement, just a simulation
+    end
+end
+
+-- Update FPS function
+local function updateFPS()
+    while true do
+        -- Calculate FPS
+        local fps = math.floor(1 / game:GetService("RunService").Heartbeat:Wait())
+        -- Update FPS label text
+        FpsLabel.Text = "FPS: " .. fps
+    end
+end
+
+-- Safe teleport function with retries
+local function safeTeleport(placeId, retries)
+    TeleportStatusLabel.Text = "Teleportation Status: Attempting..."
+    local attempts = 0
+
+    while attempts < retries do
+        local success, err = pcall(function()
+            TeleportService:Teleport(placeId, player)
+        end)
+
+        if success then
+            TeleportStatusLabel.Text = "Teleportation Status: Successful"
+            print("Teleport successful!")
+            return true
+        else
+            warn("Teleport failed: " .. tostring(err))
+            attempts += 1
+            TeleportStatusLabel.Text = "Teleportation Status: Failed, retrying..."
+            wait(2) -- Wait before retrying
+        end
+    end
+
+    TeleportStatusLabel.Text = "Teleportation Status: Failed after retries"
+    warn("Failed to teleport after " .. retries .. " attempts.")
+    return false
+end
+
+-- Check the current place ID and teleport if needed
+if game.PlaceId == placeId1 or game.PlaceId == placeId2 then
+    TeleportStatusLabel.Text = "Teleportation Status: Attempting..."
+    safeTeleport(destinationPlaceId, maxRetries)
+else
+    TeleportStatusLabel.Text = "Teleportation Status: Not configured for teleportation."
+end
+
+-- Reconnect to the same instance if disconnected
+game:GetService("NetworkClient").ChildRemoved:Connect(function()
+    if not reconnecting then
+        reconnecting = true
+        TeleportStatusLabel.Text = "Teleportation Status: Reconnecting..."
+
+        local attempts = 0
+        while attempts < maxRetries do
+            local success, err = pcall(function()
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
+            end)
+
+            if success then
+                TeleportStatusLabel.Text = "Teleportation Status: Reconnection successful"
+                reconnecting = false
+                return
+            else
+                warn("Reconnection failed: " .. tostring(err))
+                attempts += 1
+                TeleportStatusLabel.Text = "Teleportation Status: Reconnection failed, retrying..."
+                wait(2) -- Wait before retrying
+            end
+        end
+
+        TeleportStatusLabel.Text = "Teleportation Status: Failed after retries"
+        reconnecting = false
+    else
+        print("Reconnect already in progress, skipping.")
+    end
+end)
+
+-- Start the anti-AFK function
+spawn(preventAFK)
+
+-- Start the FPS display update function
+spawn(updateFPS)
