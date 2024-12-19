@@ -32,55 +32,6 @@ local player = Players.LocalPlayer
 local maxRetries = 3 -- Maximum retries for teleport
 local reconnecting = false -- To prevent multiple reconnections
 
--- GUI setup
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = player.PlayerGui
-ScreenGui.Name = "InfoGUI"
-
-local Frame = Instance.new("Frame")
-Frame.Parent = ScreenGui
-Frame.Position = UDim2.new(0.5, -200, 0, 50)
-Frame.Size = UDim2.new(0, 400, 0, 200)
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Frame.BorderSizePixel = 0
-
-local Title = Instance.new("TextLabel")
-Title.Parent = Frame
-Title.Position = UDim2.new(0, 0, 0, 0)
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundTransparency = 1
-Title.Text = "Blade Ball Info"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 24
-Title.TextAlign = Enum.TextXAlignment.Center
-
-local FpsLabel = Instance.new("TextLabel")
-FpsLabel.Parent = Frame
-FpsLabel.Position = UDim2.new(0, 10, 0, 50)
-FpsLabel.Size = UDim2.new(1, -20, 0, 40)
-FpsLabel.BackgroundTransparency = 1
-FpsLabel.Text = "FPS: Loading..."
-FpsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-FpsLabel.TextSize = 18
-
-local AntiAfkLabel = Instance.new("TextLabel")
-AntiAfkLabel.Parent = Frame
-AntiAfkLabel.Position = UDim2.new(0, 10, 0, 100)
-AntiAfkLabel.Size = UDim2.new(1, -20, 0, 40)
-AntiAfkLabel.BackgroundTransparency = 1
-AntiAfkLabel.Text = "Anti-AFK: Loading..."
-AntiAfkLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-AntiAfkLabel.TextSize = 18
-
-local TeleportStatusLabel = Instance.new("TextLabel")
-TeleportStatusLabel.Parent = Frame
-TeleportStatusLabel.Position = UDim2.new(0, 10, 0, 150)
-TeleportStatusLabel.Size = UDim2.new(1, -20, 0, 40)
-TeleportStatusLabel.BackgroundTransparency = 1
-TeleportStatusLabel.Text = "Teleportation Status: Loading..."
-TeleportStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TeleportStatusLabel.TextSize = 18
-
 -- Anti-AFK function
 local function preventAFK()
     AntiAfkLabel.Text = "Anti-AFK: Enabled"
