@@ -1,10 +1,9 @@
--- Set FPS cap to 10 with retry logic
+-- Set FPS cap to 10
 setfpscap(10)
 
 -- Retry logic to ensure FPS cap is set
 local maxRetries = 5
 local success = false
-
 for i = 1, maxRetries do
     success = pcall(function()
         setfpscap(10)
@@ -17,7 +16,6 @@ for i = 1, maxRetries do
         wait(0.5)  -- Wait for retry
     end
 end
-
 if not success then
     warn("Failed to set FPS cap after " .. maxRetries .. " attempts")
 end
@@ -105,8 +103,8 @@ end
 
 -- Safe teleport function with retries
 local function safeTeleport(placeId, retries)
-    local attempts = 0
     TeleportStatusLabel.Text = "Teleportation Status: Attempting..."
+    local attempts = 0
 
     while attempts < retries do
         local success, err = pcall(function()
